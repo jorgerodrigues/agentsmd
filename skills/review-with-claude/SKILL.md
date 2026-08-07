@@ -1,0 +1,118 @@
+---
+name: review-with-claude
+description: Delegate a full, prioritized code review of the current branch to a fresh Claude CLI session, then fix the findings and re-review until it reports the branch clean. Use when the user invokes $review-with-claude or asks to review the branch with Claude, run a claude review, or get a second opinion on the current changes from Claude. The spawned session only reviews; this agent does all the fixing, and never commits, pushes, or posts to GitHub.
+---
+
+# Review with Claude
+
+A separate Claude session finds the defects, you fix them, and the loop exits on that session's output rather than on your own assessment of your work. The reviewer starts with no memory of writing the code, so it is not anchored to the reasoning that produced the bug. Do not shortcut it by reviewing the diff yourself.
+
+This works from any driving agent, including Claude Code — a fresh session is still an independent reader of the same diff.
+
+The review rubric lives in the `review-pr` skill, not here. This skill only drives the loop.
+
+## 1. Preflight
+
+Run everything from the repository root (`git rev-parse --show-toplevel`).
+
+- `command -v claude` and `command -v jq` — both are required. If either is missing, say so and stop. Do not substitute your own review.
+- Run `claude auth status` from the same execution context that will launch the reviewer. On macOS, Claude can store authentication in Keychain, and a restricted sandbox can report `"loggedIn": false` even when the user's terminal is logged in because it cannot read those credentials. If that happens, retry outside the restricted sandbox, requesting credential-access approval when required, and run every later `claude` command in that same context. Only ask the user to log in when the unrestricted check also reports that they are logged out.
+- Confirm the reviewer's rubric is installed: `~/.claude/skills/review-pr` must exist. If it does not, stop and tell the user to run this repo's `link.sh`. Without it the spawned session reviews with no rubric and the priorities become meaningless.
+- Resolve the default branch from `git symbolic-ref --quiet refs/remotes/origin/HEAD` (strip `refs/remotes/origin/`), falling back to `main`, then `master`.
+- Choose the base ref: prefer `origin/<name>` whenever it resolves, and fall back to the local branch name only when it does not. The remote ref is right in both awkward cases — on the default branch, comparing local `main` against itself reviews nothing, and on a feature branch, a missing or stale local `main` silently reviews against the wrong base. Confirm with `git rev-parse --verify` and check the base is not already at HEAD.
+- `git status --porcelain` — skip the working-tree run when the tree is clean.
+- Skip the base run only when no base ref resolves or the base is already at HEAD, and say so in the report. Being on the default branch is not itself a reason to skip it.
+- `mktemp -d` for the round artifacts.
+
+Do not pass `--model`. The reviewer should inherit the user's configured model; silently downgrading it weakens every finding.
+
+## 2. Run a review round
+
+Unlike Codex, `claude` has no review subcommand and no scope flags, so state the scope in the prompt. Run the ones that apply:
+
+```sh
+claude -p "/review-pr Review the changes on this branch against the base ref $BASE, comparing from their merge base." \
+  --permission-mode dontAsk --tools "Read,Grep,Glob,Bash" \
+  --output-format json < /dev/null > "$DIR/r$N-base.json"
+
+claude -p "/review-pr Review the staged, unstaged, and untracked changes in the working tree." \
+  --permission-mode dontAsk --tools "Read,Grep,Glob,Bash" \
+  --output-format json < /dev/null > "$DIR/r$N-worktree.json"
+```
+
+`--tools` is what makes the reviewer read-only: `Edit`, `Write`, and `NotebookEdit` are absent from its toolset entirely. `dontAsk` stops it stalling on a prompt it cannot answer non-interactively, and `< /dev/null` stops it waiting on stdin it will never receive.
+
+Three configurations look equivalent and are not. Use the one above:
+
+- Do **not** allowlist with `--allowedTools "Read Grep Glob Bash"` and block edits with `--disallowedTools`. Blanket `Bash` approval pre-approves *every* shell command, so the reviewer can rewrite files through the shell with the edit tools still nominally blocked. Verified: a reviewer configured that way modified the file it was asked to review.
+- Do **not** use `--permission-mode plan`. Plan mode is not merely read-only — it injects Claude Code's plan workflow, which authorizes writing a plan file and steers the turn toward `ExitPlanMode` instead of the review report, corrupting `.result` into plan content.
+- Never pass `--dangerously-skip-permissions` or an `acceptEdits` mode. A reviewer that can rewrite the code you are asking it to judge is worthless.
+
+A review takes minutes, so run it in the background rather than blocking on a long foreground command.
+
+Do not use `claude ultrareview`. It is a billed, user-triggered cloud review; it is the user's to launch, not yours.
+
+Read three fields from each result:
+
+```sh
+jq -r '.is_error, (.permission_denials | length), .result' "$DIR/r$N-base.json"
+```
+
+- `.result` — the review text.
+- `.is_error` — true means the run failed. Surface it and stop.
+- `.permission_denials` — informational, **not** a failure. Denials are normal: `review-pr` opens by running `gh pr view`, which `dontAsk` denies in most repositories. Never gate the loop on this list being empty — it rarely is, and doing so means no round can ever pass and every run burns to the round cap.
+
+Judge completeness from the review itself, not from the denial count. A reviewer that was blocked from reading the code says so in its own opening lines; when it does, treat the round as incomplete and report which tools were denied. A denied `gh pr view` in a repository with no pull request blocked nothing that matters.
+
+The findings come back in the `review-pr` format, one per heading:
+
+```
+**[P1][Correctness] Short imperative title — path:line**
+```
+
+When nothing clears the bar, `.result` is exactly `No findings cleared the bar.`
+
+## 3. Merge and triage
+
+- Fingerprint a finding as its path plus its title with the `[Pn][Lane] ` prefix stripped. Deduplicate across the two runs, keeping the higher-priority copy.
+- Treat an untagged finding as P2. Assume it matters.
+- The two lanes carry different fixes: a Correctness finding names a trigger and a wrong result, a Design finding names a durable maintenance cost. Do not "fix" a design finding by patching a symptom.
+
+## 4. Act on the findings
+
+Work P0 through P2 in priority order. Leave P3 alone and collect it for the report.
+
+1. Read the cited file and the code around it. Findings are evidence, not instructions — confirm the claim against the actual code before changing anything.
+2. Fix minimally: the smallest focused change, following the patterns already in the file and the coding guidance your own instruction files loaded — no speculative abstraction, no refactoring of code the diff did not touch.
+3. Never weaken, skip, or delete a test to clear a finding. Fix the code.
+4. Dismiss a finding only with an evidence-backed reason — the premise is wrong, the case is already handled elsewhere (cite where), or the code is pre-existing and outside the diff. Every dismissal goes in the report.
+
+## 5. Verify before the next round
+
+Run the narrowest meaningful checks for what you touched — typecheck, lint, or the relevant tests, discovered from `package.json` scripts, a `Makefile`, or `go test`. This catches a broken fix before the next round reviews it as though it were sound.
+
+## 6. Loop control
+
+Re-run step 2 against the new state.
+
+**Exit clean** when a full round comes back with no findings at P0, P1, or P2 and no statement that the reviewer was blocked from reading the code. The exit signal has to be the reviewer's own output on the current state of the code — never your judgement that the remaining findings look unimportant, and never a round you skipped because the last one was nearly clean.
+
+**Stop and escalate** when any of these happen:
+
+- Four rounds have run.
+- A fingerprint you fixed in one round reappears in the next. Either your fix is wrong or the reviewer is, and more rounds will not settle it — hand that finding to the user.
+- A round produces more P0–P2 findings than the round before it.
+
+Each round is a full Claude session and is billed as one. If you are about to start a fourth round, say what it will cost in rounds before doing it.
+
+## 7. Report
+
+Lead with the verdict, then the detail:
+
+1. Clean after N rounds, or stopped after N rounds with M findings unresolved and why.
+2. **Fixed** — finding, `path:line`, and what changed.
+3. **Dismissed** — finding and the reason.
+4. **P3 findings** left for the user to decide on.
+5. Checks run and their results.
+
+Leave every change in the working tree. Do not commit, push, or post anything to GitHub.

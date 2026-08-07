@@ -1,0 +1,24 @@
+# AGENTS.md
+
+This file provides guidance to agents.
+
+## Where to find further instructions
+
+We use progressive disclosure here, so for further instructions (as needed).
+
+Paths below are relative to this file — if you reached it through a symlink, resolve the link first.
+
+- About me: ./docs/ME.md
+- General coding: ./docs/CODING.md
+- Typescript rules: ./docs/TYPESCRIPT.md
+
+## Communication
+
+- Be concise. Skip obvious explanations. 
+- In doubt ask. If anything is ambiguous and can change the direction of our task I would like to be involved, rather than have you making assumptions which could be wrong.
+- Don't suggest things I didn't ask for unless it matches the theme of our conversation.
+
+## Pull requests
+
+- NEVER add yourself as coauthor
+- NEVER add your name to the branch name or PR name

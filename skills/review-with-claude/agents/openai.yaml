@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review with Claude"
+  short_description: "Second opinion from the Claude CLI"
+  default_prompt: "Use $review-with-claude to review the current branch with the Claude CLI and fix the findings it reports."

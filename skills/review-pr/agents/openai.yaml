@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review PR"
+  short_description: "Review changes like the CI agents"
+  default_prompt: "Use $review-pr to review the current pull request for correctness and maintainability findings."

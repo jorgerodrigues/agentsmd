@@ -1,0 +1,4 @@
+interface:
+  display_name: "Babysit PR"
+  short_description: "Work a PR's comments and CI until green"
+  default_prompt: "Use $babysit-pr to address the review comments on the current pull request and keep it moving until CI is green."

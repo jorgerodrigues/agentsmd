@@ -5,7 +5,9 @@ description: Delegate a full, prioritized code review of the current branch to a
 
 # Review with Claude
 
-A separate Claude session finds the defects, you fix them, and the loop exits on that session's output rather than on your own assessment of your work. The reviewer starts with no memory of writing the code, so it is not anchored to the reasoning that produced the bug. Do not shortcut it by reviewing the diff yourself.
+A separate Claude session tries to break the change, you fix what it breaks, and the loop exits on that session's output rather than on your own assessment of your work. The reviewer starts with no memory of writing the code, so it is not anchored to the reasoning that produced the bug. Do not shortcut it by reviewing the diff yourself.
+
+The review is adversarial in one direction only. The reviewer's job is to prove the change is broken; your job is to make it prove that, not to accept every objection. A finding is a claim to be checked, and a reviewer that cannot name a trigger has not found anything.
 
 This works from any driving agent, including Claude Code — a fresh session is still an independent reader of the same diff.
 
@@ -28,17 +30,28 @@ Do not pass `--model`. The reviewer should inherit the user's configured model; 
 
 ## 2. Run a review round
 
-Unlike Codex, `claude` has no review subcommand and no scope flags, so state the scope in the prompt. Run the ones that apply:
+Unlike Codex, `claude` has no review subcommand and no scope flags, so state the scope and the stance in the prompt. Run the ones that apply:
 
 ```sh
-claude -p "/review-pr Review the changes on this branch against the base ref $BASE, comparing from their merge base." \
+STANCE='Work adversarially. Assume the change is broken and try to prove it: choose the
+inputs, ordering, concurrency, permissions, or environment that would make it fail, and
+follow the call path until you either have a concrete failing case or have satisfied
+yourself there is none. Every finding must name what triggers it and what breaks as a
+result. Report nothing you cannot ground that way — no style, naming, formatting,
+comment-wording, or documentation preferences, and nothing phrased as "consider" or
+"you might want to". If the only cost you can state is that you would have written it
+differently, it is not a finding. Finding nothing is a valid and useful result.'
+
+claude -p "/review-pr Review the changes on this branch against the base ref $BASE, comparing from their merge base. $STANCE" \
   --permission-mode dontAsk --tools "Read,Grep,Glob,Bash" \
   --output-format json < /dev/null > "$DIR/r$N-base.json"
 
-claude -p "/review-pr Review the staged, unstaged, and untracked changes in the working tree." \
+claude -p "/review-pr Review the staged, unstaged, and untracked changes in the working tree. $STANCE" \
   --permission-mode dontAsk --tools "Read,Grep,Glob,Bash" \
   --output-format json < /dev/null > "$DIR/r$N-worktree.json"
 ```
+
+The stance sharpens `review-pr`'s rubric; it does not replace it. Keep the `/review-pr` prefix — it carries the priority scale and the report format that steps 3 and 6 parse.
 
 `--tools` is what makes the reviewer read-only: `Edit`, `Write`, and `NotebookEdit` are absent from its toolset entirely. `dontAsk` stops it stalling on a prompt it cannot answer non-interactively, and `< /dev/null` stops it waiting on stdin it will never receive.
 
@@ -78,6 +91,13 @@ When nothing clears the bar, `.result` is exactly `No findings cleared the bar.`
 - Treat an untagged finding as P2. Assume it matters.
 - The two lanes carry different fixes: a Correctness finding names a trigger and a wrong result, a Design finding names a durable maintenance cost. Do not "fix" a design finding by patching a symptom.
 
+Then hold every finding to the bar, whatever priority it carries. Keep it only if you can answer both:
+
+1. **What makes it happen** — the input, state, sequence, or environment that triggers it, or the specific maintenance cost someone pays later.
+2. **What goes wrong** — the incorrect behaviour, the failure, or the thing that must now change in two places.
+
+Drop anything that fails either question, and drop anything about code the diff did not touch unless the diff is what made it wrong. An adversarial reviewer produces more candidates, not better ones; the bar is what turns volume into signal. Record what you dropped and why — a dropped finding is a decision, not an oversight, and the report shows it.
+
 ## 4. Act on the findings
 
 Work P0 through P2 in priority order. Leave P3 alone and collect it for the report.
@@ -95,24 +115,39 @@ Run the narrowest meaningful checks for what you touched — typecheck, lint, or
 
 Re-run step 2 against the new state.
 
-**Exit clean** when a full round comes back with no findings at P0, P1, or P2 and no statement that the reviewer was blocked from reading the code. The exit signal has to be the reviewer's own output on the current state of the code — never your judgement that the remaining findings look unimportant, and never a round you skipped because the last one was nearly clean.
+**Exit clean** when a full round produces no P0–P2 finding that clears the step 3 bar, and no statement that the reviewer was blocked from reading the code. The exit signal has to be the reviewer's own output on the current state of the code — never your judgement that a finding which *did* clear the bar looks unimportant, and never a round you skipped because the last one was nearly clean.
 
-**Stop and escalate** when any of these happen:
+Candidates you dropped below the bar do not block the exit. Nothing changed in the code to stop the reviewer raising them again, so expect recurrence: drop them again, note them once in the report, and do not let them hold the loop open or count as circling.
+
+### Keep a ledger
+
+From round two onward, maintain a ledger with one row per finding: the round it appeared, its fingerprint, **the underlying claim restated in your own words**, and what you did about it.
+
+Check every new finding against the ledger before you touch any code. An adversarial reviewer will keep finding something to say, so the guard against circling has to be yours:
+
+- **The same claim in new words.** A fingerprint only catches a verbatim repeat. It does not catch the same objection re-argued from a different line, under a different title, or at a different priority. Compare the *claim*, not the string. The second time a claim you already **fixed** comes back, you stop — you do not try a third phrasing of the fix. This applies to claims you acted on; a claim you dropped below the bar recurring is expected and means nothing.
+- **A finding about your own fix.** If the reviewer objects to code a previous round introduced, fix it once. If the round after that objects again, the two of you are negotiating, not converging. Stop.
+- **A change that undoes an earlier one.** If the edit you are about to make restores something a previous round already changed away from, you are ping-ponging between two states that each look wrong from the other side. Stop and show the user both.
+- **A diff that keeps growing.** If the accumulated fixes have grown well past the change you set out to review, the review has turned into a rewrite. Stop.
+
+### Stop and escalate
 
 - Four rounds have run.
-- A fingerprint you fixed in one round reappears in the next. Either your fix is wrong or the reviewer is, and more rounds will not settle it — hand that finding to the user.
-- A round produces more P0–P2 findings than the round before it.
+- Any ledger check above trips.
+- A round produces more P0–P2 findings that clear the bar than the round before it.
+- A round where you fixed things and the *same claims* survived. Compare claims, not counts: one finding fixed and a different one discovered is the loop working, even though the count is unchanged. Stagnation is the old claims still standing.
 
-Each round is a full Claude session and is billed as one. If you are about to start a fourth round, say what it will cost in rounds before doing it.
+Each round is a full Claude session and is billed as one. If you are about to start a fourth round, say what it will cost before doing it.
 
 ## 7. Report
 
 Lead with the verdict, then the detail:
 
-1. Clean after N rounds, or stopped after N rounds with M findings unresolved and why.
+1. Clean after N rounds, or stopped after N rounds with M findings unresolved and why — naming the ledger check that tripped, if one did.
 2. **Fixed** — finding, `path:line`, and what changed.
 3. **Dismissed** — finding and the reason.
-4. **P3 findings** left for the user to decide on.
-5. Checks run and their results.
+4. **Dropped below the bar** — findings that named no trigger or no consequence, one line each. The user should be able to see what the reviewer raised and you declined to chase.
+5. **P3 findings** left for the user to decide on.
+6. Checks run and their results.
 
 Leave every change in the working tree. Do not commit, push, or post anything to GitHub.

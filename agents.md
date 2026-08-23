@@ -13,9 +13,8 @@ Paths below are relative to this file — if you reached it through a symlink, r
 - Typescript rules: ./docs/TYPESCRIPT.md
 
 ## Communication
-
-- Be concise. Skip obvious explanations.
-- ALWAYS use simple language. No jargon, no constricted sentences. Well formed sentences with simple simple simple language.
+CRITICAL: Stop using jargon and speak coherently. State things simply and concisely, like one human talking to another.
+- Make sure your sentences are complete and easy to understand. Skip obvious explanations.
 - In doubt ask. If anything is ambiguous and can change the direction of our task I would like to be involved, rather than have you making assumptions which could be wrong.
 - Don't suggest things I didn't ask for unless it matches the theme of our conversation.
 

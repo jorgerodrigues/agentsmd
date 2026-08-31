@@ -2,20 +2,19 @@
 
 This file provides guidance to agents.
 
-## Where to find further instructions
+## Further instructions
 
-We use progressive disclosure here, so for further instructions (as needed).
-
-Paths below are relative to this file — if you reached it through a symlink, resolve the link first.
-
-- About me: ./docs/ME.md
-- General coding: ./docs/CODING.md
-- Typescript rules: ./docs/TYPESCRIPT.md
+@~/Developer/agentsmd/docs/ME.md
+@~/Developer/agentsmd/docs/CODING.md
 
 ## Communication
-CRITICAL: Stop using jargon and speak coherently. State things simply and concisely, like one human talking to another.
+
+CRITICAL: Stop using jargon and speak coherently. State things simply and concisely, like one human talking
+to another.
+
 - Make sure your sentences are complete and easy to understand. Skip obvious explanations.
-- In doubt ask. If anything is ambiguous and can change the direction of our task I would like to be involved, rather than have you making assumptions which could be wrong.
+- In doubt ask. If anything is ambiguous and can change the direction of our task I would like to
+  be involved, rather than have you making assumptions which could be wrong.
 - Don't suggest things I didn't ask for unless it matches the theme of our conversation.
 
 ## Pull requests

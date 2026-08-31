@@ -8,8 +8,6 @@ Right now I am a full stack software engineer.
 I am also an Electrical Engineer and I really like tinkering with electronics.
 When I want to learn, I like to create a mental model first and learn the details after. Visualizations REALLY HELP me.
 
-Whenever your are designing visual artifacts and have not received specific instructions on the design use (extend as needed) the theme below. 
-
 I love to build
 
 ## Communication style

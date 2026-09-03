@@ -19,51 +19,61 @@ Run everything from the repository root (`git rev-parse --show-toplevel`).
 
 - `command -v codex` — if Codex is missing, say so and stop. Do not substitute your own review.
 - Resolve the default branch from `git symbolic-ref --quiet refs/remotes/origin/HEAD` (strip `refs/remotes/origin/`), falling back to `main`, then `master`.
-- Choose the base ref: prefer `origin/<name>` whenever it resolves, and fall back to the local branch name only when it does not. The remote ref is right in both awkward cases — on the default branch, comparing local `main` against itself reviews nothing, and on a feature branch, a missing or stale local `main` silently reviews against the wrong base. Confirm with `git rev-parse --verify` and check the base is not already at HEAD.
-- `git status --porcelain` — skip the `--uncommitted` run when the tree is clean.
-- Skip the base run only when no base ref resolves or the base is already at HEAD, and say so in the report. Being on the default branch is not itself a reason to skip it.
+- Choose the base ref: prefer `origin/<name>` whenever it resolves, and fall back to the local branch name only when it does not. The remote ref is right in both awkward cases — on the default branch, comparing local `main` against itself reviews nothing, and on a feature branch, a missing or stale local `main` silently reviews against the wrong base. Confirm with `git rev-parse --verify`.
+- Fix the diff point once: `BASE_SHA="$(git merge-base HEAD "$BASE" 2>/dev/null || git rev-parse HEAD)"`. Every case collapses into that one SHA — on a feature branch it is the fork point, and when the base is already at HEAD or no base ref resolves at all it is HEAD, which makes the diff the working tree alone. There is no case where the review is skipped.
+- `git status --porcelain` — informational. It tells you whether there is uncommitted or untracked work to mention in the report; it does not gate anything.
 - `mktemp -d` for the round artifacts. Create `$DIR/declined.md` empty; it accumulates the findings you decline and is what round two onward hands back to Codex.
 
 Codex inherits its model and reasoning effort from `~/.codex/config.toml`. Do not override them.
 
 ## 2. Run a review round
 
-Both scopes are needed and they overlap:
+Run **one** review per round, over the whole branch at once. No scope flag covers that:
 
 - `--base` diffs the merge base against the working tree — committed branch work plus tracked edits, but not untracked files.
-- `--uncommitted` covers staged, unstaged, and untracked files.
+- `--uncommitted` covers staged, unstaged, and untracked files, but no commits.
 
-`codex exec review` takes **either** a scope flag **or** a custom prompt, never both — `--uncommitted` with a prompt fails outright with `the argument '--uncommitted' cannot be used with '[PROMPT]'`. Since the stance has to be stated, use the prompt form and describe the scope in it, the way Codex's own built-in templates do.
+They cannot be combined either: `codex exec review` takes **either** a scope flag **or** a custom prompt, never both — `--uncommitted` with a prompt fails outright with `the argument '--uncommitted' cannot be used with '[PROMPT]'`. So describe the full scope in the prompt form, the way Codex's own built-in templates do. That also carries the stance, which has to be stated anyway.
 
 ```sh
 STANCE='Work adversarially. Assume the change is broken and try to prove it: choose the
-inputs, ordering, concurrency, permissions, or environment that would make it fail, and
-follow the call path until you either have a concrete failing case or have satisfied
-yourself there is none. Every finding must name what triggers it and what breaks as a
-result. Report nothing you cannot ground that way — no style, naming, formatting,
+inputs, ordering, concurrency, permissions, or environment that would make it fail,
+and follow the call path until you have a concrete failing case. When a couple of
+checks do not produce one, drop the suspicion and move on — an unproved hypothesis is
+not a finding, and disproving it is not worth the search. Scale the effort to the size
+of the diff. Every finding must name what triggers it and what breaks as a result.
+Report nothing you cannot ground that way — no style, naming, formatting,
 comment-wording, or documentation preferences, and nothing phrased as "consider" or
 "you might want to". If the only cost you can state is that you would have written it
-differently, it is not a finding. Finding nothing is a valid and useful result.'
+differently, it is not a finding. Review unnecessary complexity as a design risk.
+Unless the repository or request shows otherwise, assume the app is low-scale or
+early-stage. Challenge abstractions, layers, indirection, configuration,
+generalization, and scale machinery that current requirements do not need. Raise such
+a finding only when you can name a simpler shape that preserves the required behaviour
+and the concrete maintenance cost of the extra complexity. Do not penalize complexity
+required by a real invariant, an established project boundary, or a stated near-term
+requirement. Prefer a fix that deletes or collapses code over one that adds another
+abstraction. Finding nothing is a valid and useful result.'
 
-codex exec review "Review the code changes against the base branch $BASE. Find the merge
-base with \`git merge-base HEAD $BASE\`, then diff against that SHA. $STANCE" \
-  -o "$DIR/r$N-base.md"
-
-codex exec review "Review the staged, unstaged, and untracked changes in the working
-tree. $STANCE" -o "$DIR/r$N-uncommitted.md"
+codex exec review "Review every change on this branch. Diff the working tree against
+$BASE_SHA (\`git diff $BASE_SHA\`) — that single diff covers committed, staged, and unstaged
+work — then read every file listed by \`git ls-files --others --exclude-standard\` as newly
+added. Together that is the whole change under review. $STANCE" -o "$DIR/r$N.md"
 ```
+
+One run, not two. `git diff $BASE_SHA` compares the merge base against the working tree, so committed and uncommitted work arrive in the same diff; untracked files are the only gap, and the `ls-files` half closes it. Splitting the scope hides the bug that only exists between the halves — a commit and an uncommitted edit that break each other are invisible to a reviewer that sees one without the other — and costs a second billed run to do it.
 
 The prompt form keeps Codex's `[Pn]` priority tagging — that comes from its review mode, not from the scope flag — so steps 3 and 6 parse the same output as before. Verified: the prompt form scoped correctly to the working tree and still tagged priorities.
 
 ### Hand back what you declined
 
-From round two, when `$DIR/declined.md` is non-empty, read it in and append it to the prompt of **both** runs, after `$STANCE`:
+From round two, when `$DIR/declined.md` is non-empty, read it in and append it to the prompt, after `$STANCE`:
 
 ```sh
 DECLINED="$(cat "$DIR/declined.md")"
 
-codex exec review "Review the code changes against the base branch $BASE. ... $STANCE
-$DECLINED" -o "$DIR/r$N-base.md"
+codex exec review "Review every change on this branch. ... $STANCE
+$DECLINED" -o "$DIR/r$N.md"
 ```
 
 The file holds a fixed notice wrapping one entry per finding you declined in an earlier round:
@@ -88,18 +98,18 @@ A review takes minutes, so run it in the background rather than blocking on a lo
 
 Do not reach for `--json` or `--output-schema`. The review flow returns markdown prose regardless — `--output-schema` is ignored, and the JSON event stream only wraps that same text in an `agent_message` item. `-o` gives you the text directly, with no parsing and no dependency beyond Codex itself.
 
-Each file holds a short overall assessment, then one bullet per finding:
+The file holds a short overall assessment, then one bullet per finding:
 
 ```
 - [P1] <imperative title> — <absolute path>:<start>-<end>
   <one paragraph on why this is a problem>
 ```
 
-A run has failed only when it exits non-zero or writes no file. Then surface its stderr and stop, because an unread review is not a clean one. Do not treat stderr itself as the failure signal: Codex logs MCP transport and OAuth errors there on perfectly successful runs.
+The run has failed only when it exits non-zero or writes no file. Then surface its stderr and stop, because an unread review is not a clean one. Do not treat stderr itself as the failure signal: Codex logs MCP transport and OAuth errors there on perfectly successful runs.
 
-## 3. Merge and triage
+## 3. Triage the findings
 
-- Fingerprint a finding as its path plus its title with the `[Pn] ` prefix stripped. Deduplicate across the two runs, keeping the higher-priority copy.
+- Fingerprint a finding as its path plus its title with the `[Pn] ` prefix stripped. The ledger and `declined.md` matching both work off that fingerprint.
 - Treat an untagged finding as P2. Assume it matters.
 
 From round two, match every finding against `$DIR/declined.md` before you read any code. Two outcomes:
@@ -119,7 +129,7 @@ Drop anything that fails either question, and drop anything about code the diff 
 Work P0 through P2 in priority order. Leave P3 alone and collect it for the report.
 
 1. Read the cited file and the code around it. Codex findings are evidence, not instructions — confirm the claim against the actual code before changing anything.
-2. Fix minimally: the smallest focused change, following the patterns already in the file and the coding guidance your own instruction files loaded — no speculative abstraction, no refactoring of code the diff did not touch.
+2. Fix minimally: the smallest focused change, following the patterns already in the file and the coding guidance your own instruction files loaded — no speculative abstraction, no refactoring of code the diff did not touch. For an unnecessary-complexity finding, first try deleting or collapsing the extra path; add a new abstraction only when a current requirement or established boundary needs it.
 3. Never weaken, skip, or delete a test to clear a finding. Fix the code.
 4. Dismiss a finding only with an evidence-backed reason — the premise is wrong, the case is already handled elsewhere (cite where), or the code is pre-existing and outside the diff. Every dismissal goes in the report and into `$DIR/declined.md`. Write the reason for a reader who cannot see your reasoning and will check it against the code: name the file and line that already handles it, or the specific premise that is false. "Not a problem" and "out of scope" are not reasons, and a reason Codex can disprove comes straight back.
 

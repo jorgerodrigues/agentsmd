@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test assets"
+  short_description: "Save screenshots and videos, then clean up"
+  default_prompt: "Use $test-assets to save screenshots and video captures for this branch and delete them when the branch is done."

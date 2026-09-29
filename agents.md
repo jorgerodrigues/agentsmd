@@ -69,6 +69,8 @@ Give me the mental model first and the details after. Visualisations help me a l
 - Use realistic fixtures when behaviour depends on real formats, integrations or protocols.
 - Never delete or skip a test to make something pass. Fix the code.
 - No test is better than a useless test.
+- Save screenshots and video captures in `~/Developer/test-assets/<branch>`. Follow the
+  `test-assets` skill. Delete the folder when the branch is done.
 
 ### Before calling it done
 

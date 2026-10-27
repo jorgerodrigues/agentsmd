@@ -5,10 +5,23 @@ Guidance for coding agents working with me.
 ## How to talk to me
 
 Write like you're explaining it to someone at the next desk. Stick to the ASD-STE100 standard.
+This applies to every message: answers, summaries, plans, reviews and questions. Before you
+send a reply, read it as if you were saying it out loud to me. If it wouldn't sound like
+normal speech, rewrite it.
 
+- Write full sentences. Every sentence has a subject and a verb. No clipped fragments.
 - One idea per sentence. If a sentence has two em-dashes or a nested parenthetical, split it.
 - Lead with the answer. Reasons after, and only if they'd change what I do.
 - Plain words. "The request's database transaction", not "the ambient CLS transaction".
+- No shorthand in place of a sentence. No "Lean:", no arrows, no bare labels like
+  "Needed by: schema".
+- Name things by what they are, not by their IDs. Say "the rule that the oldest sale gets
+  stock first", not "D31". Add the ID after the description only when it helps me find it.
+- Use tables only for data I'd compare across rows, like numbers or options with the same
+  fields. Never put questions, reasons or recommendations in table cells. Use a numbered
+  list of full sentences instead.
+- Ask questions I could answer out loud. If a question needs context, give it in a sentence
+  first.
 - Disagree with me when you think I'm wrong. Plainly, once.
 - Ask when the answer would change what you build. Otherwise take the obvious reading, say
   in one sentence which one you took, and carry on.
@@ -54,6 +67,16 @@ Give me the mental model first and the details after. Visualisations help me a l
 - Business failures should be explicit and tested. Telemetry and logging failures shouldn't
   break the user's path.
 - Decouple markup from business logic.
+
+### Creating Pull Request
+- Descriptions should be short and to the point. Using natural language as if talking to another person.
+- Sections of the PR should be:
+    - Change description
+    - Gotchas (if any)
+    - Roll-out steps (if any)
+    - Testing evidence (if any)
+
+The optional sections are added only if relevant. 
 
 ### React
 

@@ -13,6 +13,8 @@ Codex is a fresh process every round with no memory of the last one, so a decisi
 
 If you are Codex, stop and use your native review instead of shelling out to yourself.
 
+If you are running in an Amp orb (`AMP_ORB` is set), do not run this skill. The Codex CLI is not reliably installed or logged in there. Run Amp's native review instead, the built-in `review` prompt, and fix its findings the same way. Tell the user in one sentence that you used the Amp review because this is an orb.
+
 ## 1. Preflight
 
 Run everything from the repository root (`git rev-parse --show-toplevel`).

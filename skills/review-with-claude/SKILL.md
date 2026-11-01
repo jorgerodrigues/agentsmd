@@ -13,6 +13,8 @@ Each round is a fresh session with no memory of the last one, so a decision you 
 
 This works from any driving agent, including Claude Code — a fresh session is still an independent reader of the same diff.
 
+If you are running in an Amp orb (`AMP_ORB` is set), do not run this skill. The Claude CLI is not reliably installed or logged in there. Run Amp's native review instead, the built-in `review` prompt, and fix its findings the same way. Tell the user in one sentence that you used the Amp review because this is an orb.
+
 The review rubric lives in the `review-pr` skill, not here. This skill only drives the loop.
 
 ## 1. Preflight

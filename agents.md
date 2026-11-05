@@ -103,6 +103,11 @@ The optional sections are added only if relevant.
 
 ## Pull requests
 
+When you finish implementation work on a pull request, use the `pr-walkthrough` skill before
+your final handoff. Link the local HTML walkthrough in your final reply. Follow this rule even
+for small changes, and keep the walkthrough proportional to the change. Keep generated walkthroughs
+and their drafts outside the repository. Follow the skill's cleanup steps.
+
 - Ask whether I want you to resolve comments you just addressed.
 
 Never add yourself as coauthor, never put your name in a branch or PR name, and never add

@@ -89,7 +89,22 @@ done
 # Each skill in skills/ is linked into every agent's skills directory. The agent's
 # own config directory must exist, but skills/ under it may not yet: it is created
 # on first install, so a fresh machine would otherwise silently link nothing.
-for skills_dir in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+# The global directories match the ones the `skills` installer (npx skills) uses.
+# ~/.agents/skills is shared by Cline, Kimi Code CLI, Warp and Zed, and
+# ~/.config/agents/skills is Amp's.
+CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
+for skills_dir in \
+  "$HOME/.claude/skills" \
+  "$HOME/.codex/skills" \
+  "$HOME/.agents/skills" \
+  "$CONFIG_HOME/agents/skills" \
+  "$CONFIG_HOME/opencode/skills" \
+  "$HOME/.cursor/skills" \
+  "$HOME/.gemini/skills" \
+  "$HOME/.gemini/antigravity/skills" \
+  "$HOME/.gemini/antigravity-cli/skills" \
+  "$HOME/.copilot/skills" \
+  "$HOME/.deepagents/agent/skills"; do
   agent_dir=$(dirname "$skills_dir")
   if [ ! -d "$agent_dir" ]; then
     echo "skip  $skills_dir ($agent_dir does not exist)"

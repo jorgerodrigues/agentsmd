@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Debounce the low-battery alarm</title>
+  <!-- html-theme -->
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Debounce the low-battery alarm</h1>
+      <p class="lead">The alarm now waits for three low readings in a row. It clears only after the battery recovers above 3.35 V.</p>
+      <ul class="meta">
+        <li class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-git-pr"/></svg><a href="#checks">Pull request 142</a></li>
+        <li class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-git-branch"/></svg><code>fix/vbat-debounce</code></li>
+        <li class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-git-commit"/></svg><code>a41c9e2</code></li>
+        <li class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>3 files, 42 lines added, 7 removed</li>
+      </ul>
+    </header>
+
+    <section aria-labelledby="architecture">
+      <h2 id="architecture">Architecture</h2>
+      <p>Each ADC reading goes through one handler. The handler counts low readings and decides when to raise or clear the alarm.</p>
+      <ol class="flow">
+        <li><span class="name with-icon"><svg class="icon is-muted" aria-hidden="true"><use href="#i-cpu"/></svg>ADC interrupt</span><span class="small muted">Reads the battery through the 1:2 divider every 100 ms.</span></li>
+        <li><span class="name with-icon"><svg class="icon is-muted" aria-hidden="true"><use href="#i-code"/></svg><code>vbat_on_sample()</code></span><span class="small muted">Converts the reading to millivolts and counts low readings.</span></li>
+        <li><span class="name with-icon"><svg class="icon is-muted" aria-hidden="true"><use href="#i-bell"/></svg>Alarm</span><span class="small muted">Raised on the third low reading. Cleared at 3.35 V or more.</span></li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="walkthrough">
+      <h2 id="walkthrough">Code walkthrough</h2>
+      <h3>The sample handler counts low readings</h3>
+      <p>A reading below 3.30 V adds one to the count. The third one in a row raises the alarm. A reading at 3.30 V or more resets the count, but only 3.35 V or more clears the alarm.</p>
+      <div class="code">
+        <div class="code-head">
+          <span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>firmware/power/vbat.c</span>
+          <button type="button" class="icon-btn" aria-label="Copy code" title="Copy code"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        </div>
+<pre><code><span class="tk-k">if</span> (mv &lt; VBAT_LOW_MV) {
+    <span class="tk-k">if</span> (low_count &lt; LOW_READINGS_MAX &amp;&amp; ++low_count == LOW_READINGS_MAX) {
+        <span class="tk-f">alarm_raise</span>();
+    }
+    <span class="tk-k">return</span>;  <span class="tk-c">/* hysteresis: only a high reading clears */</span>
+}</code></pre>
+      </div>
+      <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="#walkthrough">vbat.c, lines 18 to 41 at a41c9e2</a></p>
+    </section>
+
+    <section aria-labelledby="bench">
+      <h2 id="bench">Bench measurements</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th class="num">Time</th><th class="num">ADC reading</th><th class="num">Battery</th><th class="num">Low count</th><th>State</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="num">0 ms</td><td class="num">2112</td><td class="num">3403 mV</td><td class="num">0</td><td><span class="with-icon muted"><span class="icon-slot"></span>Normal</span></td></tr>
+            <tr><td class="num">200 ms</td><td class="num">2041</td><td class="num">3289 mV</td><td class="num">1</td><td><span class="with-icon"><svg class="icon is-muted" aria-hidden="true"><use href="#i-clock"/></svg>Counting</span></td></tr>
+            <tr><td class="num">600 ms</td><td class="num">2028</td><td class="num">3268 mV</td><td class="num">3</td><td><span class="with-icon name"><svg class="icon is-danger" aria-hidden="true"><use href="#i-triangle-alert"/></svg>Alarm</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid">
+        <div class="panel"><span class="label">Lowest reading</span><span class="display">3268 mV</span><span class="small muted">At 600 ms, on the third low sample.</span></div>
+        <div class="panel">
+          <span class="label">Battery over time</span>
+          <svg class="chart" viewBox="0 0 232 112" width="232" role="img" aria-labelledby="chart-title">
+            <title id="chart-title">Seven readings from 3403 down to 3268 millivolts. The limit is 3300 millivolts.</title>
+            <rect class="series" x="0" y="16.2" width="20" height="73.8"/>
+            <rect class="series" x="28" y="46.4" width="20" height="43.6"/>
+            <rect class="series" x="56" y="57.6" width="20" height="32.4"/>
+            <rect class="series" x="84" y="51.1" width="20" height="38.9"/>
+            <rect class="series" x="112" y="61.3" width="20" height="28.7"/>
+            <rect class="series" x="140" y="64.2" width="20" height="25.8"/>
+            <rect class="highlight" x="168" y="65.3" width="20" height="24.7"/>
+            <line class="axis" x1="0" y1="90.5" x2="188" y2="90.5"/>
+            <line class="limit" x1="0" y1="53.6" x2="192" y2="53.6"/>
+            <text x="196" y="58">3300</text>
+            <text class="value" x="178" y="108" text-anchor="middle">3268</text>
+            <text x="10" y="108" text-anchor="middle">3403</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="checks">
+      <h2 id="checks">Checks</h2>
+      <ul class="checks">
+        <li><svg class="icon is-success" aria-hidden="true"><use href="#i-circle-check"/></svg><div><div class="name">Unit tests</div><div class="small muted">48 tests passed.</div></div><span class="small faint">1.2 s</span></li>
+        <li><svg class="icon is-warning" aria-hidden="true"><use href="#i-triangle-alert"/></svg><div><div class="name">Static analysis</div><div class="small muted">One new style warning in vbat.c.</div></div><span class="small faint">8 s</span></li>
+        <li><svg class="icon is-danger" aria-hidden="true"><use href="#i-circle-x"/></svg><div><div class="name">Format check</div><div class="small muted">clang-format would change 2 lines.</div></div><span class="small faint">3 s</span></li>
+        <li><svg class="icon is-muted" aria-hidden="true"><use href="#i-clock"/></svg><div><div class="name">Flash size budget</div><div class="small muted">Waits for the release build.</div></div><span class="small faint"></span></li>
+      </ul>
+      <div class="callout"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>The divider halves the battery voltage, so the code multiplies by 6600 and not by 3300.</p></div>
+      <div class="callout warning"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg><p>A reading between 3.30 V and 3.35 V resets the count but does not clear an active alarm. That gap is on purpose.</p></div>
+      <details>
+        <summary>Why three readings?</summary>
+        <p>Motor start pulls the rail down for about 150 ms. Three readings 100 ms apart span at least 200 ms, so a start never raises the alarm.</p>
+      </details>
+    </section>
+
+    <section aria-labelledby="try">
+      <h2 id="try">Try it on the bench</h2>
+      <nav class="tabs" aria-label="Bench views"><a href="#try" aria-current="page">Readings</a><a href="#checks">Checks</a><a href="#bench">Files</a></nav>
+      <div class="panel">
+        <div class="field">
+          <label for="threshold">Low threshold</label>
+          <div class="input"><input id="threshold" value="3300" inputmode="numeric" aria-describedby="threshold-hint"><span class="suffix">mV</span></div>
+          <p class="hint" id="threshold-hint">Readings below this count toward the alarm.</p>
+        </div>
+        <label class="checkbox" for="hysteresis"><input type="checkbox" id="hysteresis" checked>Clear the alarm only at 3.35 V or more</label>
+        <div class="row">
+          <button type="button" class="btn btn-primary">Run bench test</button>
+          <button type="button" class="btn btn-secondary"><svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>Copy command</button>
+          <button type="button" class="btn btn-quiet">Cancel</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

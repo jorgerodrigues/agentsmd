@@ -4,101 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{CHANGE_TITLE}} · PR walkthrough</title>
+  <!-- html-theme -->
   <style>
-    :root {
-      color-scheme: light dark;
-      --surface: #fcfcfa;
-      --ink: #192523;
-      --muted: #4b605b;
-      --rule: #c5d3ce;
-      --accent: #176453;
-      --panel: #edf4f0;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --surface: #171e1c;
-        --ink: #edf4f0;
-        --muted: #b6c8c1;
-        --rule: #4c625b;
-        --accent: #9ce2cd;
-        --panel: #232f2b;
-      }
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: var(--surface);
-      color: var(--ink);
-      font: 1rem/1.6 system-ui, sans-serif;
-    }
-
-    main { max-width: 65rem; margin: auto; padding: clamp(1rem, 5vw, 4rem); }
-    h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
-    h1 { font-size: clamp(1.9rem, 5vw, 3rem); line-height: 1.12; letter-spacing: -0.035em; }
-    h2 { font-size: 1.35rem; }
-    h3 { font-size: 1.1rem; }
-    p + p { margin-top: 0.65rem; }
-    a { color: var(--accent); text-underline-offset: 0.2em; }
-    header p { margin-top: 0.65rem; }
-    section, footer { margin-top: 2.25rem; border-top: 1px solid var(--rule); padding-top: 1.25rem; }
-    .source { font-size: 0.875rem; color: var(--muted); }
-
-    .flow {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
-      gap: 0.75rem;
-      margin: 1rem 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .flow li { background: var(--panel); border-top: 2px solid var(--accent); padding: 0.8rem 1rem; }
-    .flow a, .flow span { display: block; overflow-wrap: anywhere; }
-    .flow a { font-weight: 650; }
-    .flow span { margin-top: 0.25rem; color: var(--muted); }
-
-    article { margin-top: 1.25rem; padding: 0.3rem 0 0.3rem 1rem; border-left: 2px solid var(--rule); }
-    article:target { border-color: var(--accent); }
-    article p { margin-top: 0.5rem; }
-    pre {
-      background: var(--panel);
-      padding: 0.9rem 1rem;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      tab-size: 2;
-    }
-    code { font-family: ui-monospace, monospace; }
-    figure { margin: 1rem 0 0; }
-    figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--rule); }
-    figcaption { margin-top: 0.4rem; color: var(--muted); font-size: 0.875rem; }
-    details { margin-top: 0.8rem; }
-    summary { width: fit-content; color: var(--accent); cursor: pointer; }
+    /* Walkthrough stops, built from theme tokens only. */
+    .stop { display: grid; gap: var(--space-3); padding-inline-start: var(--space-4); border-inline-start: 2px solid var(--border-subtle); scroll-margin-top: var(--space-5); }
+    .stop:target { border-inline-start-color: var(--accent); }
+    .stop + .stop { margin-top: var(--space-5); }
+    .stop figure img { border: 1px solid var(--border); border-radius: var(--radius); }
   </style>
 </head>
 <body>
-  <main>
+  <main class="page">
     <header>
       <h1>{{CHANGE_TITLE}}</h1>
-      <p>{{WHAT_CHANGED}}</p>
-      <p class="source"><a href="{{PR_URL}}">{{PR_LABEL}}</a> · {{REVISION}}</p>
+      <p class="lead">{{WHAT_CHANGED}}</p>
+      <ul class="meta">
+        <li class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-git-pr"/></svg><a href="{{PR_URL}}">{{PR_LABEL}}</a></li>
+        <li class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-git-commit"/></svg><code>{{REVISION}}</code></li>
+      </ul>
     </header>
 
     <section aria-labelledby="architecture">
       <h2 id="architecture">Architecture</h2>
       <p>{{ARCHITECTURE_EXPLANATION}}</p>
-      <!-- Adapt the flow to show the important boundaries for this change. -->
-      <ol class="flow" role="list" aria-label="Implementation path">
-        <li>
-          <a href="#entry">1. {{ENTRY_POINT}}</a>
-          <span>{{INPUT_AND_HANDOFF}}</span>
-        </li>
-        <li>
-          <a href="#decision">2. {{DECISION_POINT}}</a>
-          <span>{{DECISION_AND_OUTPUT}}</span>
-        </li>
+      <!-- Adapt the flow to show the important boundaries for this change. Keep it to five steps or fewer. -->
+      <ol class="flow" aria-label="Implementation path">
+        <li><a class="name" href="#entry">1. {{ENTRY_POINT}}</a><span class="small muted">{{INPUT_AND_HANDOFF}}</span></li>
+        <li><a class="name" href="#decision">2. {{DECISION_POINT}}</a><span class="small muted">{{DECISION_AND_OUTPUT}}</span></li>
       </ol>
     </section>
 
@@ -106,18 +38,25 @@
       <h2 id="walkthrough">Code walkthrough</h2>
       <p>{{REPRESENTATIVE_CASE}}</p>
 
-      <article id="entry">
+      <article class="stop" id="entry">
         <h3>{{ENTRY_STOP_TITLE}}</h3>
         <p>{{ENTRY_EXPLANATION}}</p>
-        <pre><code>{{ESCAPED_ENTRY_CODE}}</code></pre>
-        <p class="source"><a href="{{ENTRY_SOURCE_URL}}">{{ENTRY_FILE_AND_LINES}}</a></p>
+        <div class="code">
+          <div class="code-head"><span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>{{ENTRY_FILE_AND_LINES}}</span></div>
+          <pre><code>{{ESCAPED_ENTRY_CODE}}</code></pre>
+        </div>
+        <!-- Remove this line when there is no source link. The code head already names the file. -->
+        <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="{{ENTRY_SOURCE_URL}}">{{ENTRY_SOURCE_LABEL}}</a></p>
       </article>
 
-      <article id="decision">
+      <article class="stop" id="decision">
         <h3>{{DECISION_STOP_TITLE}}</h3>
         <p>{{DECISION_EXPLANATION}}</p>
-        <pre><code>{{ESCAPED_DECISION_CODE}}</code></pre>
-        <p class="source"><a href="{{DECISION_SOURCE_URL}}">{{DECISION_FILE_AND_LINES}}</a></p>
+        <div class="code">
+          <div class="code-head"><span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>{{DECISION_FILE_AND_LINES}}</span></div>
+          <pre><code>{{ESCAPED_DECISION_CODE}}</code></pre>
+        </div>
+        <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="{{DECISION_SOURCE_URL}}">{{DECISION_SOURCE_LABEL}}</a></p>
         <!-- Move this figure to the step it explains, or remove it when a screenshot would not help. -->
         <figure>
           <img src="{{SCREENSHOT_DATA_URL}}" alt="{{SCREENSHOT_ALT}}">

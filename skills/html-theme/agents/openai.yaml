@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML theme"
+  short_description: "House style for HTML pages"
+  default_prompt: "Use $html-theme to style this HTML page."

@@ -32,6 +32,7 @@ I'm a full stack software engineer and an electrical engineer. I like tinkering 
 electronics.
 
 Give me the mental model first and the details after. Visualisations help me a lot.
+When you make an HTML page for me, style it with the `html-theme` skill.
 
 ## Coding
 

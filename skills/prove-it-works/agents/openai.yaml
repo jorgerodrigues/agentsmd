@@ -1,0 +1,5 @@
+interface:
+  display_name: "Prove It Works"
+
+policy:
+  allow_implicit_invocation: false

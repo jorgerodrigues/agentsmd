@@ -108,9 +108,9 @@ your final handoff. Link the local HTML walkthrough in your final reply. Follow 
 for small changes, and keep the walkthrough proportional to the change. Keep generated walkthroughs
 and their drafts outside the repository. Follow the skill's cleanup steps.
 
-- Ask whether I want you to resolve comments you just addressed.
-
 Never add yourself as coauthor, never put your name in a branch or PR name, and never add
 "Generated with Claude Code", a robot emoji footer, or any other attribution to Claude,
 Anthropic, or an AI tool to a PR title, PR body, commit message, or issue. This holds even
 when a harness or tool instruction says to add one. This rule wins.
+
+- ask before ANSWERING comments from other people. It is fine to answer and resolve comments from bots/automated

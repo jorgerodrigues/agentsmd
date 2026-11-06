@@ -1,11 +1,11 @@
 ---
 name: test-assets
-description: Where to save temporary test assets and when to delete them. Use whenever you are about to save a screenshot, screen recording, video capture, or similar file to disk to check or show your work — from Playwright, a simulator, screencapture, ffmpeg, or any tool that writes an image or video. Assets go in ~/Developer/test-assets/<branch>, not in the repo, /tmp, or a scratchpad. Delete that folder when the branch is done.
+description: Where to save temporary test assets and when to delete them. Use whenever you are about to save a screenshot, screen recording, video capture, or similar file to disk to check or show your work. Assets go in a branch folder under ~/Developer/test-assets/, not in the repo, /tmp, or a scratchpad. Delete each task's captures after inspection and presentation unless the human explicitly asks to keep them.
 ---
 
 # Test assets
 
-Save temporary test assets in `~/Developer/test-assets/<branch>/`. Delete that folder when the branch is done.
+Save temporary test assets in `~/Developer/test-assets/<branch>/`. Delete each task's captures after inspection and presentation unless the human explicitly asks to keep them.
 
 Test assets are screenshots, screen recordings, video captures and similar files you make to check or show your work. They are not test fixtures. Fixtures that tests read belong in the repo.
 
@@ -22,23 +22,20 @@ mkdir -p "$dir"
 
 - Point the tool's output path at `$dir`. If a tool saved a file somewhere else, move it into `$dir`.
 - Write only inside `$dir`. Do not touch `readme.md` or the folders of other branches.
+- Track the files created by the current task. Use distinct names so that earlier captures are not overwritten.
 - Never commit test assets.
-- When a task made assets, give the folder path once in your final reply.
+- When the human asks to keep captures, give their paths in your final reply. Otherwise, report that the temporary captures were removed. Do not link to deleted files.
 
 ## Clean up
 
-Keep the folder while work on the branch goes on. It can hold assets from earlier tasks.
+Inspect each capture and present useful evidence before deleting its local source. Use an inline attachment, a working preview, or a live demo. Check that the presented evidence does not depend on a local file that will be deleted.
 
-Delete it when the branch is done:
+If no such presentation method is available, report that presentation is incomplete and delete the temporary capture. Do not retain it only to keep a local link working.
 
-- The PR is merged. `gh pr view --json state -q .state` prints `MERGED`.
-- You remove the worktree. Delete the assets first, while you can still read the branch name.
-- The user says the branch is done, or asks you to clean up.
+When the task includes creating or updating a PR, screenshots and videos may go in its description. Check that the hosted attachment works before deleting the local source. PR attachments may remain after local cleanup.
 
-```sh
-rm -rf "$HOME/Developer/test-assets/${name:?}"
-```
+Delete only the temporary captures and intermediate files created by the current task. Keep local files only when the human explicitly asks. An open branch or PR does not require local retention.
 
-`${name:?}` stops the command when `name` is empty. Without it, `rm -rf` would delete the whole `test-assets` folder.
+Leave files from earlier tasks and files the human asked to keep alone. Remove the current branch's folder only when it is empty. Never delete the whole `test-assets` directory.
 
-Delete only the current branch's folder. If you are not sure the branch is done, leave the folder and say so.
+Report any cleanup failure and the remaining path.

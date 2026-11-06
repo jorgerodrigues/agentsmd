@@ -11,6 +11,8 @@
     .stop:target { border-inline-start-color: var(--accent); }
     .stop + .stop { margin-top: var(--space-5); }
     .stop figure img { border: 1px solid var(--border); border-radius: var(--radius); }
+    .diagram { overflow-x: auto; }
+    .diagram img { max-width: none; }
   </style>
 </head>
 <body>
@@ -27,11 +29,22 @@
     <section aria-labelledby="architecture">
       <h2 id="architecture">Architecture</h2>
       <p>{{ARCHITECTURE_EXPLANATION}}</p>
-      <!-- Adapt the flow to show the important boundaries for this change. Keep it to five steps or fewer. -->
-      <ol class="flow" aria-label="Implementation path">
-        <li><a class="name" href="#entry">1. {{ENTRY_POINT}}</a><span class="small muted">{{INPUT_AND_HANDOFF}}</span></li>
-        <li><a class="name" href="#decision">2. {{DECISION_POINT}}</a><span class="small muted">{{DECISION_AND_OUTPUT}}</span></li>
-      </ol>
+      <!-- Remove the figure when prose is enough. Embed the rendered Mermaid SVGs as data URLs. -->
+      <figure>
+        <div class="diagram" role="region" aria-label="Implementation flow" tabindex="0">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="{{MERMAID_DARK_SVG_DATA_URL}}">
+            <img src="{{MERMAID_SVG_DATA_URL}}" alt="{{MERMAID_ALT}}" width="{{MERMAID_WIDTH}}">
+          </picture>
+        </div>
+        <figcaption>{{MERMAID_CAPTION}}</figcaption>
+      </figure>
+      <nav aria-label="Code stops">
+        <ol>
+          <li><a href="#entry">{{ENTRY_STOP_TITLE}}</a></li>
+          <li><a href="#decision">{{DECISION_STOP_TITLE}}</a></li>
+        </ol>
+      </nav>
     </section>
 
     <section aria-labelledby="walkthrough">
@@ -62,12 +75,20 @@
           <img src="{{SCREENSHOT_DATA_URL}}" alt="{{SCREENSHOT_ALT}}">
           <figcaption>{{SCREENSHOT_CAPTION}}</figcaption>
         </figure>
-        <!-- Keep this disclosure only when an additional case matters. -->
+        <!-- Use this disclosure for a secondary case. It can contain its own code and source links. -->
         <details>
           <summary>{{ADDITIONAL_CASE_TITLE}}</summary>
           <p>{{ADDITIONAL_CASE_EXPLANATION}}</p>
         </details>
       </article>
+    </section>
+
+    <!-- Remove this section when there are no gotchas. -->
+    <section aria-labelledby="gotchas">
+      <h2 id="gotchas">Gotchas</h2>
+      <ul>
+        <li>{{GOTCHA_CONDITION_AND_EFFECT}}</li>
+      </ul>
     </section>
 
     <footer aria-labelledby="evidence">

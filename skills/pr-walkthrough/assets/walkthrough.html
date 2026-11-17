@@ -59,7 +59,7 @@
         <p>{{MIGRATION_EXPLANATION_AND_DEPLOYMENT_ORDER}}</p>
         <div class="code">
           <div class="code-head"><span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>{{MIGRATION_FILE_AND_LINES}}</span></div>
-          <pre><code>{{ESCAPED_MIGRATION_CODE}}</code></pre>
+          <pre><code class="language-{{MIGRATION_LANGUAGE}}">{{ESCAPED_MIGRATION_CODE}}</code></pre>
         </div>
         <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="{{MIGRATION_SOURCE_URL}}">{{MIGRATION_SOURCE_LABEL}}</a></p>
       </article>
@@ -69,7 +69,7 @@
         <p>{{ENTRY_EXPLANATION}}</p>
         <div class="code">
           <div class="code-head"><span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>{{ENTRY_FILE_AND_LINES}}</span></div>
-          <pre><code>{{ESCAPED_ENTRY_CODE}}</code></pre>
+          <pre><code class="language-{{ENTRY_LANGUAGE}}">{{ESCAPED_ENTRY_CODE}}</code></pre>
         </div>
         <!-- Remove this line when there is no source link. The code head already names the file. -->
         <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="{{ENTRY_SOURCE_URL}}">{{ENTRY_SOURCE_LABEL}}</a></p>
@@ -80,7 +80,7 @@
         <p>{{DECISION_EXPLANATION}}</p>
         <div class="code">
           <div class="code-head"><span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>{{DECISION_FILE_AND_LINES}}</span></div>
-          <pre><code>{{ESCAPED_DECISION_CODE}}</code></pre>
+          <pre><code class="language-{{DECISION_LANGUAGE}}">{{ESCAPED_DECISION_CODE}}</code></pre>
         </div>
         <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="{{DECISION_SOURCE_URL}}">{{DECISION_SOURCE_LABEL}}</a></p>
         <!-- Capture or use an existing real screenshot whenever possible. Move or repeat this figure beside the step it demonstrates. If no useful capture is available, remove the figure and explain why in Verification. -->

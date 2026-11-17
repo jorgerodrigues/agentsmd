@@ -1,10 +1,14 @@
 import argparse
+from html.parser import HTMLParser
+import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 
-ASSETS = Path(__file__).resolve().parent.parent / "assets"
+SKILL_DIR = Path(__file__).resolve().parent.parent
+ASSETS = SKILL_DIR / "assets"
 MARKER = "<!-- html-theme -->"
 THEME_START = "<!-- html-theme:start -->"
 THEME_END = "<!-- html-theme:end -->"
@@ -29,6 +33,88 @@ OWN_STYLE = [
     (re.compile(r"font-family\s*:"), "a font family"),
     (re.compile(r"font-size\s*:\s*[0-9.]+(?:px|rem|em|pt)"), "a font size"),
 ]
+
+
+class CodeBlocks(HTMLParser):
+    def __init__(self, page):
+        super().__init__(convert_charrefs=True)
+        self.line_offsets = [0] + [match.end() for match in re.finditer("\n", page)]
+        self.blocks = []
+        self.pre_depth = 0
+        self.current = None
+        self.feed(page)
+        self.close()
+        if self.current is not None:
+            raise ValueError("A code snippet has no closing </code> tag.")
+
+    def source_offset(self):
+        line, column = self.getpos()
+        return self.line_offsets[line - 1] + column
+
+    def handle_starttag(self, tag, attrs):
+        if self.current is not None:
+            if tag != "span":
+                raise ValueError("Escape HTML inside code snippets before applying the theme.")
+            return
+        if tag == "pre":
+            self.pre_depth += 1
+        elif tag == "code" and self.pre_depth:
+            classes = (dict(attrs).get("class") or "").split()
+            language = next((name.removeprefix("language-") for name in classes if name.startswith("language-")), None)
+            if language:
+                self.current = {"start": self.source_offset() + len(self.get_starttag_text()), "language": language.lower(), "parts": []}
+
+    def handle_data(self, data):
+        if self.current is not None:
+            self.current["parts"].append(data)
+
+    def handle_comment(self, data):
+        if self.current is not None:
+            raise ValueError("Escape HTML inside code snippets before applying the theme.")
+
+    def handle_endtag(self, tag):
+        if tag == "code" and self.current is not None:
+            self.current["end"] = self.source_offset()
+            self.current["source"] = "".join(self.current.pop("parts"))
+            self.blocks.append(self.current)
+            self.current = None
+        elif tag == "pre":
+            self.pre_depth = max(0, self.pre_depth - 1)
+
+
+def highlight_pages(pages):
+    blocks_by_page = [CodeBlocks(page).blocks for page in pages]
+    snippets = [block for blocks in blocks_by_page for block in blocks]
+    if not snippets:
+        return pages, [0] * len(pages)
+    if not (SKILL_DIR / "node_modules" / "shiki" / "package.json").is_file():
+        raise ValueError(
+            f"Syntax highlighting needs Shiki. Run npm ci --prefix '{SKILL_DIR}' --ignore-scripts --no-audit --no-fund, then run this command again."
+        )
+    try:
+        result = subprocess.run(
+            ["node", str(SKILL_DIR / "scripts" / "highlight.mjs")],
+            input=json.dumps([{"source": block["source"], "language": block["language"]} for block in snippets]),
+            capture_output=True, text=True,
+        )
+    except FileNotFoundError as error:
+        raise ValueError("Syntax highlighting needs Node.js 20 or later on PATH.") from error
+    if result.returncode:
+        raise ValueError(f"Syntax highlighting failed: {result.stderr.strip()}")
+    highlighted = json.loads(result.stdout)
+    for warning in highlighted["warnings"]:
+        print(f"warning: {warning}", file=sys.stderr)
+    output = []
+    counts = []
+    cursor = 0
+    for page, blocks in zip(pages, blocks_by_page):
+        replacements = highlighted["snippets"][cursor:cursor + len(blocks)]
+        for block, replacement in reversed(list(zip(blocks, replacements))):
+            page = page[:block["start"]] + replacement["html"] + page[block["end"]:]
+        output.append(page)
+        counts.append(sum(replacement["highlighted"] for replacement in replacements))
+        cursor += len(blocks)
+    return output, counts
 
 
 def theme_block(web_fonts):
@@ -84,7 +170,7 @@ def apply(page, web_fonts):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Insert the html-theme stylesheet and the icons a page uses.")
+    parser = argparse.ArgumentParser(description="Apply the HTML theme, insert icons, and highlight code with Shiki.")
     parser.add_argument("pages", nargs="+", type=Path, metavar="PAGE", help="HTML file to update in place.")
     parser.add_argument(
         "--web-fonts",
@@ -94,12 +180,18 @@ def main():
     args = parser.parse_args()
 
     try:
+        prepared = []
         for path in args.pages:
-            page, names = apply(path.read_text(), args.web_fonts)
-            path.write_text(page)
+            with path.open(newline="") as source:
+                page, names = apply(source.read(), args.web_fonts)
+            prepared.append((path, page, names))
+        pages, counts = highlight_pages([page for _, page, _ in prepared])
+        for (path, _, names), page, count in zip(prepared, pages, counts):
+            with path.open("w", newline="") as target:
+                target.write(page)
             icons = f"{len(names)} icons ({', '.join(names)})" if names else "no icons"
             fonts = "web fonts linked" if args.web_fonts else "installed fonts only"
-            print(f"{path}: applied the theme with {icons}, {fonts}.")
+            print(f"{path}: applied the theme with {icons}, {fonts}, {count} highlighted code blocks.")
             for what in own_style_warnings(page):
                 print(f"{path}: warning: the page sets {what} of its own. Use the theme's tokens instead.", file=sys.stderr)
     except (OSError, ValueError) as error:

@@ -179,11 +179,10 @@ figcaption, caption { font-size: var(--text-small); line-height: var(--lh-small)
 .code-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4); border-bottom: 1px solid var(--border-subtle); font-size: var(--text-small); line-height: var(--lh-small); color: var(--text-muted); }
 .code-head .icon { color: var(--text-faint); }
 .code pre { background: none; border-radius: 0; }
-.tk-k { color: var(--text-strong); font-weight: 600; }
-.tk-t { color: var(--text-strong); }
-.tk-f { color: var(--text-strong); font-weight: 500; }
-.tk-p { color: var(--text-muted); }
-.tk-c { color: var(--text-faint); }
+pre code .syntax-strong { color: var(--text-strong); }
+pre code .syntax-muted { color: var(--text-muted); }
+pre code .syntax-bold { font-weight: var(--weight-strong); }
+pre code .syntax-italic { font-style: italic; }
 .source { font-size: var(--text-small); line-height: var(--lh-small); color: var(--text-muted); }
 .source .icon { color: var(--text-faint); }
 

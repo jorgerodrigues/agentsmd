@@ -1,0 +1,14 @@
+{
+  "name": "html-theme",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "python3 -m unittest discover -s tests"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "shiki": "4.6.0"
+  }
+}

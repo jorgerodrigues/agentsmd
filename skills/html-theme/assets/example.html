@@ -38,11 +38,11 @@
           <span class="with-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>firmware/power/vbat.c</span>
           <button type="button" class="icon-btn" aria-label="Copy code" title="Copy code"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button>
         </div>
-<pre><code><span class="tk-k">if</span> (mv &lt; VBAT_LOW_MV) {
-    <span class="tk-k">if</span> (low_count &lt; LOW_READINGS_MAX &amp;&amp; ++low_count == LOW_READINGS_MAX) {
-        <span class="tk-f">alarm_raise</span>();
+<pre><code class="language-c">if (mv &lt; VBAT_LOW_MV) {
+    if (low_count &lt; LOW_READINGS_MAX &amp;&amp; ++low_count == LOW_READINGS_MAX) {
+        alarm_raise();
     }
-    <span class="tk-k">return</span>;  <span class="tk-c">/* hysteresis: only a high reading clears */</span>
+    return;  /* hysteresis: only a high reading clears */
 }</code></pre>
       </div>
       <p class="source with-icon"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><a href="#walkthrough">vbat.c, lines 18 to 41 at a41c9e2</a></p>

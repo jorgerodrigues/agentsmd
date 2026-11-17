@@ -5,15 +5,23 @@ description: The house theme for HTML pages. Use it whenever you write or restyl
 
 # HTML theme
 
-Text is Mona Sans and code is Geist Mono, on neutral grays, with red-orange only on marks. A script inserts the stylesheet and the icons. Write markup with the elements and classes below. Do not read the asset files unless you are changing the theme itself.
+Text is Mona Sans and code is Geist Mono, on neutral grays, with red-orange only on marks. A script inserts the stylesheet and icons and highlights code with Shiki. Write markup with the elements and classes below. Do not read the asset files unless you are changing the theme itself.
 
 ## Build a page
 
 1. Put `<!-- html-theme -->` inside `<head>`. Write the body with the elements and classes below. For a page that uses every component, see [the example](assets/example.html).
-2. Run `python3 <skill-dir>/scripts/apply_theme.py <page.html>`. It replaces the marker with the stylesheet and adds the icons the page uses. Run it again after every edit. It replaces its own earlier output.
+2. Run `python3 <skill-dir>/scripts/apply_theme.py <page.html>`. It replaces the marker with the stylesheet, adds the icons the page uses, and highlights marked code blocks. Run it again after every edit. It replaces its own earlier output. You can pass several pages to process their code in one Shiki run.
 3. Add `--web-fonts` when the page will be published or opened on another computer. Without it, the page makes no network requests: it uses the installed fonts and falls back to IBM Plex Sans and IBM Plex Mono. To publish an artifact, build the file on disk with `--web-fonts` and publish that file.
 4. Fix every warning the script prints. Never write your own colors, font families or font sizes. If a page needs a layout the theme lacks, add a `<style>` block after the marker that uses only the theme's tokens.
 5. Look at the page in light mode, dark mode and at phone width before you hand it off.
+
+## Code highlighting
+
+Write escaped source text inside `<pre><code class="language-typescript">...</code></pre>`. Use the actual language, such as `sql`, `tsx`, `go`, `bash`, or `json`. Use `language-text` for pseudocode or deliberate plain text. Inline code and blocks without a language stay unchanged. Do not add highlighting spans by hand.
+
+Code highlighting needs Node.js 20 or later. Install the pinned dependency once with `npm ci --prefix <skill-dir> --ignore-scripts --no-audit --no-fund`. Keep that installation for later pages. The theme command does not install packages or access the network.
+
+The command uses Shiki's Oniguruma engine and loads only the required languages. It writes static spans that use the theme's grays and weights. The finished page needs no highlighter scripts or network access. Unknown languages stay plain text and produce a warning. The command preserves source text and can run again without nesting spans. Keep generated markup on disk; use the command's short summary instead of printing the highlighted HTML into the conversation.
 
 ## Type
 
@@ -78,7 +86,7 @@ Write `<svg class="icon" aria-hidden="true"><use href="#i-NAME"/></svg>` inside 
 - `.panel` is a raised tile. `.inset` is a sunken box without a border.
 - `ul.meta` is a row of small metadata, with each item in an `li.with-icon`.
 - `ol.flow` is a row of up to five steps joined by chevrons. Each `li` holds a `.name` and a `.small.muted` description.
-- `.code` wraps a `.code-head` with the file name and a copy button, then a `pre`. Highlight with `.tk-k` for keywords, `.tk-t` for types, `.tk-f` for functions, `.tk-p` for preprocessor lines and `.tk-c` for comments. They change weight and gray, never hue. A bare `pre` also works.
+- `.code` wraps a `.code-head` with the file name and a copy button, then a `pre`. Put escaped source in a `code` element with its `language-*` class. The theme command adds the highlighting. A bare `pre` also works.
 - `.source` is the line under a code block that links to the file.
 - Wrap a `table` in `.table-wrap` so it scrolls on narrow screens.
 - `ul.checks` is a status list. Each `li` holds a status icon, a `div` with a `.name` and a `.small.muted` detail, and an optional `.small.faint` duration.

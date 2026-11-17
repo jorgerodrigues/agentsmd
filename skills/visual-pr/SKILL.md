@@ -16,7 +16,8 @@ Create or update the pull request for the current task with a concise descriptio
 2. Identify or create the pull request:
    - Check the current branch for a PR with `gh pr view --json url,number,title,state,baseRefName,headRefName 2>/dev/null`.
    - If no PR exists, inspect `git status --short --branch` and the commits on the current branch.
-   - Commit task-related changes when needed, push the branch with an upstream, and create a PR for it. Follow the repository's git safety protocol.
+   - Use ordinary Git to commit task-related changes when needed. Prefer `gh` for GitHub operations and native GitHub stacks through `gh stack` from `github/gh-stack` for dependent branches. For an unstacked branch, push with an upstream and use `gh pr create`. For a tracked GitHub stack, use `gh stack submit --auto` only when creating or updating PRs for the affected layers is authorized. Preserve the intended PR base and follow the repository's git safety protocol.
+   - Use Graphite only when the user explicitly requests it, the repository requires it, or `gh` and `gh stack` cannot safely handle the existing stack. State the concrete reason before using it. Graphite configuration alone does not select it. If native GitHub stacks are unavailable, prefer ordinary PRs through `gh` where the branch chain can be preserved safely.
    - Ask the user to select a PR only when the current branch has no relevant work and there is no safe current-branch PR to create.
 
 3. Gather only the context needed to explain the change:

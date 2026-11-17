@@ -89,22 +89,47 @@ done
 # Each skill in skills/ is linked into every agent's skills directory. The agent's
 # own config directory must exist, but skills/ under it may not yet: it is created
 # on first install, so a fresh machine would otherwise silently link nothing.
-# The global directories match the ones the `skills` installer (npx skills) uses.
-# ~/.agents/skills is shared by Cline, Kimi Code CLI, Warp and Zed, and
-# ~/.config/agents/skills is Amp's.
+# Include shared skill directories and the global directories used by local agents.
+# Amp also reads its own directory when discovery from shared directories is disabled.
 CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 for skills_dir in \
-  "$HOME/.claude/skills" \
-  "$HOME/.codex/skills" \
   "$HOME/.agents/skills" \
   "$CONFIG_HOME/agents/skills" \
+  "$CONFIG_HOME/amp/skills" \
+  "$CONFIG_HOME/crush/skills" \
+  "$CONFIG_HOME/goose/skills" \
   "$CONFIG_HOME/opencode/skills" \
+  "$HOME/.claude/skills" \
+  "$HOME/.cline/skills" \
+  "$HOME/.codebuddy/skills" \
+  "$HOME/.codeium/windsurf/skills" \
+  "$HOME/.codex/skills" \
+  "$HOME/.commandcode/skills" \
+  "$HOME/.continue/skills" \
+  "$HOME/.copilot/skills" \
   "$HOME/.cursor/skills" \
+  "$HOME/.deepagents/agent/skills" \
+  "$HOME/.factory/skills" \
   "$HOME/.gemini/skills" \
   "$HOME/.gemini/antigravity/skills" \
   "$HOME/.gemini/antigravity-cli/skills" \
-  "$HOME/.copilot/skills" \
-  "$HOME/.deepagents/agent/skills"; do
+  "$HOME/.gemini/config/skills" \
+  "$HOME/.junie/skills" \
+  "$HOME/.kilo/skills" \
+  "$HOME/.kilocode/skills" \
+  "$HOME/.kiro/skills" \
+  "$HOME/.kode/skills" \
+  "$HOME/.mcpjam/skills" \
+  "$HOME/.mux/skills" \
+  "$HOME/.neovate/skills" \
+  "$HOME/.openhands/skills" \
+  "$HOME/.pi/agent/skills" \
+  "$HOME/.pochi/skills" \
+  "$HOME/.qoder/skills" \
+  "$HOME/.qwen/skills" \
+  "$HOME/.roo/skills" \
+  "$HOME/.trae/skills" \
+  "$HOME/.zencoder/skills"; do
   agent_dir=$(dirname "$skills_dir")
   if [ ! -d "$agent_dir" ]; then
     echo "skip  $skills_dir ($agent_dir does not exist)"

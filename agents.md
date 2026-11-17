@@ -104,6 +104,25 @@ The optional sections are added only if relevant.
 
 ## Pull requests
 
+### GitHub tools and stacks
+
+- Use the GitHub CLI (`gh`) for GitHub operations whenever it can do the job.
+- Prefer native GitHub stacks through `gh stack` from `github/gh-stack` for dependent
+  branches and pull requests. Use ordinary Git commands to stage and commit changes.
+- Use `gh` and `gh stack` in repositories that have Graphite configuration too. The
+  presence of `.graphite_repo_config` or an installed `gt` does not select Graphite.
+- Use Graphite only when I explicitly request it, the repository requires it, or the
+  preferred tools cannot safely handle the existing stack. State the concrete reason
+  before using it. Preserve branch order, PR bases, and existing review work when
+  adopting an existing stack with `gh stack`.
+- If native GitHub stacks are unavailable, use `gh` with ordinary pull requests and
+  preserve their base branches where possible. Do not select Graphite just for this.
+- Read the installed command's help before using unfamiliar flags. Use the `gh-stack`
+  skill when it is available. Use `gh stack view --json` and `gh stack submit --auto`
+  to avoid interactive prompts. Use `gh pr ready <pr>` when only one PR should be ready.
+- Rebase and run checks before pushing. `gh stack sync` also pushes changes, so use
+  `gh stack rebase` when the result needs local checks before publication.
+
 When you finish implementation work on a pull request, use the `pr-walkthrough` skill before
 your final handoff. Link the local HTML walkthrough in your final reply. Follow this rule even
 for small changes, and keep the walkthrough proportional to the change. Keep generated walkthroughs

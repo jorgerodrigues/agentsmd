@@ -27,13 +27,15 @@ Use the PR's actual base or the tracked stack parent for the review when known. 
 
 ## 3. Submit and mark the PR ready
 
-If the user asked to keep the work local, hand off after review. Otherwise, follow the repository's branch workflow and run any checks it requires before submitting. Commit and submit the reviewed changes. Reuse the PR on the task branch or open a draft. Write or update the description with the repository's required template and skills, and link the Linear issue.
+If the user asked to keep the work local, hand off after review. Otherwise, follow the repository's branch workflow and run any checks it requires before submitting. Prefer `gh` for GitHub operations and native GitHub stacks through `gh stack` from `github/gh-stack` for dependent branches. Use ordinary Git to stage and commit changes. Reuse the PR on the task branch or open a draft with `gh pr create --draft` for an unstacked branch or `gh stack submit --auto` for an authorized stack. Write or update the description with `gh pr edit`, follow the repository's required template and skills, and link the Linear issue.
 
-An explicit request to run this full workflow includes marking the PR ready. If the user requested a draft, hand off at that stage. If approval is still required, finish the draft and ask before changing its status. Mark only this PR ready and verify that it is open, ready for review, and at the commit you submitted. Keep the worktree clean for babysitting.
+Graphite configuration or an installed `gt` does not select Graphite. Use it only when the user explicitly requests it, the repository requires it, or `gh` and `gh stack` cannot safely handle the existing stack. State the concrete reason before using it. If native GitHub stacks are unavailable, prefer ordinary PRs through `gh` where the branch chain can be preserved safely. When adopting an existing stack, preserve branch order, PR bases, and existing review work.
+
+An explicit request to run this full workflow includes marking the PR ready. If the user requested a draft, hand off at that stage. If approval is still required, finish the draft and ask before changing its status. Mark only this PR ready with `gh pr ready <pr>` and verify that it is open, ready for review, and at the commit you submitted. Do not use `gh stack submit --open` for this step because it can mark other PRs ready too. Keep the worktree clean for babysitting.
 
 ## 4. Babysit the ready PR
 
-Use `babysit-pr` on the same PR. Keep using the repository's stack tooling in linked worktrees. Check the Git common directory for its configuration when `.git` is a worktree pointer. Ask before replying to a person and leave human review threads open.
+Use `babysit-pr` on the same PR. Keep the same tooling preference in linked worktrees. Check both the current Git directory and the common directory for stack configuration when `.git` is a worktree pointer. Verify the installed `gh stack` version's worktree support before changing a stack that spans worktrees. Use `gh stack rebase` and run local checks before `gh stack push`; `gh stack sync` also pushes. Ask before replying to a person and leave human review threads open.
 
 Wait for the skill's green and mergeable outcome. If it stops with a blocker, report the current PR state and what needs to happen before resuming. Refresh the PR description if fixes made it stale. Leave the PR open for the user to merge.
 

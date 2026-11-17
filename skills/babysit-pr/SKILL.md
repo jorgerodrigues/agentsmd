@@ -27,22 +27,22 @@ Run everything from the repository root (`git rev-parse --show-toplevel`).
 - **The working tree must be clean** (`git status --porcelain` empty). This run amends the branch, so uncommitted work would be swept into the PR's commit. If the tree is dirty, stop and tell the user what is uncommitted rather than guessing.
 - `git fetch` and confirm the local branch is not behind its remote. Amending on a stale branch and force-pushing destroys whatever landed in between.
 
-Determine the branch tooling once, and use it for every push this run:
+Use `gh` for GitHub operations. Prefer native GitHub stacks through `gh stack` from `github/gh-stack` for dependent branches. Determine the branch tooling once, and use it for every rebase and push this run:
 
-| Condition | Tooling |
-| --- | --- |
-| `.git/.graphite_repo_config` exists and `gt` is installed | Graphite |
-| Otherwise | plain git |
+1. Check `gh stack --help` and inspect the current stack with `gh stack view --json`. Use `gh stack` when the current branch is tracked by it. If the PR belongs to a GitHub stack that is not tracked locally, use `gh stack checkout <pr-url>` to load it, then verify its membership and order.
+2. For an existing Graphite stack, prefer adopting its branches with `gh stack` when the installed version can preserve the branch order, PR bases, and existing review work within the authorized scope. Use the `gh-stack` skill when it is available. The presence of `.graphite_repo_config` or an installed `gt` does not select Graphite.
+3. Use Graphite only when the user explicitly requests it, the repository requires it, or `gh` and `gh stack` cannot safely handle the existing stack. State the concrete reason before using it. If native GitHub stacks are unavailable, prefer ordinary PRs managed with `gh` where the existing branch chain can be preserved safely.
+4. Use plain Git for an unstacked branch. If another tool owns the stack, read its guidance before rewriting history. A failed `gh stack view` does not prove that the branch is unstacked.
 
-If the repo is managed by some other stacking tool, follow that tool's own skill instead of falling back to raw git — force-pushing a stacked branch outside its tool breaks the stack.
+In a linked worktree, `.git` is a file. Inspect both the current Git directory (`git rev-parse --absolute-git-dir`) and the common directory (`git rev-parse --path-format=absolute --git-common-dir`) when locating stack configuration. Check the installed version's worktree support before changing a stack that spans worktrees.
 
-When the tooling is Graphite, also record the repo's default branch:
+Record the repo's default branch:
 
 ```sh
 gh repo view --json defaultBranchRef -q .defaultBranchRef.name
 ```
 
-This PR is **mid-stack** when the tooling is Graphite and `$BASE` is not that default branch — it sits above another open PR. Steps 2, 7 and 8 each treat one Graphite check differently on a mid-stack PR. At the bottom of a stack the base is the default branch, nothing is downstack, and none of that applies.
+This PR is **mid-stack** when `$BASE` is the head branch of another open PR. Verify that relationship with the stack data or `gh pr view "$BASE" --json state,headRefName,baseRefName`; a base that differs from the default branch alone does not prove it. This definition applies regardless of the local tooling. Steps 2, 7 and 8 retain one exception for a legacy Graphite check when it is present on a mid-stack PR.
 
 ## 2. Collect the state
 
@@ -74,7 +74,7 @@ Also read `gh pr view --json comments,reviews`. Top-level PR comments and review
 
 Then read CI: `gh pr checks --json name,state,bucket,link`. Buckets are `pass`, `fail`, `pending`, `skipping`, and `cancel`. The command exits 8 when checks are still pending and non-zero when one has failed, so read the buckets rather than the exit status. It errors outright when the repo reports no checks at all — a repo with no CI is not a failing repo, so note it and move on.
 
-On a mid-stack PR, `Graphite / mergeability_check` stays pending until every PR below it in the stack has merged. It reports the state of the branches underneath, not of this change, so leave it out of the pending and failing sets and carry its state into the report instead. That exemption covers this one check and nothing else: `Graphite / AI Reviews` is a real reviewer and is waited on and fixed like any other check.
+On a mid-stack PR that still reports `Graphite / mergeability_check`, that check can stay pending until every PR below it has merged. When its only blocker is the unmerged PRs below, leave that pending check out of the waiting set and carry its state into the report instead. Apply this exception even when the local tooling is now `gh stack`. Do not ignore a failing check or extend the exception to other checks. `Graphite / AI Reviews` is a real reviewer and is waited on and fixed like any other check.
 
 Finally read the merge state, which is not a check and does not appear in `gh pr checks`:
 
@@ -114,12 +114,17 @@ Do this before you push anything. A conflicted branch cannot merge no matter how
 Skip this step when the merge state is `CLEAN` or only `UNSTABLE`. Otherwise, bring the branch up to date with the tooling you picked in step 1:
 
 ```sh
-# Graphite
-gt sync --no-interactive
+# GitHub stacks
+gh stack rebase
 
 # plain git
 git fetch origin && git rebase origin/$BASE
+
+# Graphite fallback, only for the reason recorded in step 1
+gt sync --no-interactive
 ```
+
+Do not use `gh stack sync` here. It rebases and pushes in the same command, before the local checks below can run. If the user authorized only this PR, inspect the affected branches before a stack-wide operation and keep any changes to other layers within that scope.
 
 Never use `git rebase -i`. Interactive commands cannot be answered here and will hang until the run is killed.
 
@@ -134,13 +139,14 @@ Resolve only where the right answer is readable from the two sides — the chang
 Abort and escalate when both sides changed the same logic, when the base deleted or rewrote something this change depends on, or when picking a side would decide something only the author can answer:
 
 ```sh
-gt abort            # Graphite
-git rebase --abort  # plain git
+gh stack rebase --abort  # GitHub stacks
+git rebase --abort       # plain git
+gt abort --no-interactive  # Graphite fallback
 ```
 
 The branch is then exactly as it was, and the conflict goes in the report. Guessing here is worse than stopping — a wrong resolution looks like a clean merge and reads as intentional.
 
-When you did resolve it, continue with `gt continue --no-interactive` or `git rebase --continue`, then **run the repo's local checks again**. A rebase that produces no conflict proves only that the two changes touched different lines; two changes that are each correct can still be wrong together.
+When you did resolve it, stage the resolved files with `git add`. Continue with `gh stack rebase --continue`, `git rebase --continue`, or `gt continue --no-interactive`, according to the selected tooling. Then **run the repo's local checks again**. A rebase that produces no conflict proves only that the two changes touched different lines; two changes that are each correct can still be wrong together.
 
 Push through step 5, then read the merge state again — GitHub takes a moment to recompute it after a force-push.
 
@@ -148,21 +154,30 @@ Push through step 5, then read the merge state again — GitHub takes a moment t
 
 Make the fixes for this round together, then run the repo's own narrow checks for what you touched (typecheck, lint, the relevant tests) before pushing. Pushing a broken fix costs a full CI cycle to discover.
 
-Amend the branch — do not add a round-per-commit:
+Amend the branch — do not add a round-per-commit. For GitHub stacks, stage the fix files and amend with ordinary Git:
 
 ```sh
-# Graphite
-gt modify -a --no-interactive && gt submit --no-interactive --no-edit
-
-# plain git
-git commit -a --amend --no-edit && git push --force-with-lease
+git commit --amend --no-edit
+gh stack rebase --upstack --no-trunk
 ```
 
-A round that only rebased has nothing to amend — the commit is already the one you want, so push it and skip the amend.
+Run the relevant local checks again for any layers changed by the rebase, then push with `gh stack push`. This updates existing branches without opening PRs for other layers. Use `gh stack submit --auto` only when PR creation or base updates are needed and authorized. It can affect every active branch in the stack. Do not use `--open` to mark just this PR ready; use `gh pr ready "$PR"` instead.
+
+For an unstacked branch or the Graphite fallback selected in step 1:
+
+```sh
+# plain git
+git commit -a --amend --no-edit && git push --force-with-lease
+
+# Graphite fallback
+gt modify -a --no-interactive && gt submit --no-interactive --no-edit
+```
+
+A round that only rebased has nothing to amend — the commit is already the one you want, so push it with the selected tooling and skip the amend. Verify the target PR's head and base after pushing.
 
 Use `--force-with-lease`, never a bare `--force`. If the lease is rejected, someone else pushed: stop, report it, and do not retry with force.
 
-Every `gt` command needs `--no-interactive`; Graphite prompts by default and will hang forever waiting on input it cannot receive.
+Use `gh stack view --json` for inspection and `gh stack submit --auto` for submission to avoid interactive prompts. Read the installed command's help before using unfamiliar flags. If the Graphite fallback is necessary, every `gt` command needs `--no-interactive`.
 
 ## 6. Resolve and reply
 
@@ -207,11 +222,11 @@ gh pr checks --watch --fail-fast
 
 This blocks until the checks finish, so run it in the background rather than against a foreground timeout. `--fail-fast` returns as soon as something fails instead of waiting out the rest.
 
-**On a mid-stack PR, do not use `--watch` at all.** It waits for every check, and `Graphite / mergeability_check` stays pending until the whole stack below has merged, so the command never returns. Poll instead:
+**When the legacy Graphite exception from step 2 applies, do not use `--watch`.** It waits for every check, including the pending `Graphite / mergeability_check`. Poll instead, excluding only that pending check:
 
 ```sh
 gh pr checks --json name,state,bucket,link \
-  | jq '[.[] | select(.name != "Graphite / mergeability_check")]'
+  | jq '[.[] | select(.name != "Graphite / mergeability_check" or .bucket != "pending")]'
 ```
 
 CI is settled once nothing in that filtered list is in the `pending` bucket. Then fix whatever is in `fail` exactly as below. `gh pr checks` has no flag to exclude a check, which is why this is a poll and not a neater command.
@@ -253,7 +268,7 @@ A round is: collect → triage → fix → rebase if the base moved → push →
 
 **Exit clean** when all three hold: CI is green, the PR is mergeable, and no actionable thread is left unresolved. Threads you declined, and human threads, do not block the exit — they stay open by design, and the report covers them.
 
-A mid-stack PR counts as mergeable when the only thing outstanding is the pending `Graphite / mergeability_check`. Waiting on it is waiting on other PRs to land, which this run does not do and cannot hurry. Exit clean and say so in the report — it is not a `BLOCKED`-style stop.
+A mid-stack PR meets this skill's exit condition when the only thing outstanding is the pending `Graphite / mergeability_check` covered by step 2. Report that the branch is ready and the stack still waits for the PRs below it to land. Do not claim that GitHub reports it as mergeable or extend this exception to native GitHub stack checks.
 
 **Stop and hand back** when any of these happen:
 

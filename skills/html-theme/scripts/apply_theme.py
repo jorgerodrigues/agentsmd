@@ -28,10 +28,15 @@ SYMBOL = re.compile(r'<symbol id="i-([a-z0-9-]+)".*?</symbol>', re.S)
 BODY_OPEN = re.compile(r"<body\b[^>]*>", re.I)
 STYLE_BLOCK = re.compile(r"<style\b[^>]*>(.*?)</style>", re.S | re.I)
 STYLE_ATTR = re.compile(r'\sstyle="([^"]*)"', re.I)
+USE_TOKENS = "Use the theme's tokens instead."
 OWN_STYLE = [
-    (re.compile(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\("), "a color value"),
-    (re.compile(r"font-family\s*:"), "a font family"),
-    (re.compile(r"font-size\s*:\s*[0-9.]+(?:px|rem|em|pt)"), "a font size"),
+    (re.compile(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\("), f"sets a color value of its own. {USE_TOKENS}"),
+    (re.compile(r"font-family\s*:"), f"sets a font family of its own. {USE_TOKENS}"),
+    (re.compile(r"font-size\s*:\s*[0-9.]+(?:px|rem|em|pt)"), f"sets a font size of its own. {USE_TOKENS}"),
+    (
+        re.compile(r"border-(?:top|right|bottom|left|(?:inline|block)-(?:start|end))(?:-(?:color|style|width))?\s*:"),
+        "puts a border on one side of a box. Use tone, a full border or a status icon instead.",
+    ),
 ]
 
 
@@ -137,9 +142,9 @@ def own_style_warnings(page):
     page = ICONS_BLOCK.sub("", page)
     sources = STYLE_BLOCK.findall(page) + STYLE_ATTR.findall(page)
     found = []
-    for pattern, what in OWN_STYLE:
+    for pattern, warning in OWN_STYLE:
         if any(pattern.search(source) for source in sources):
-            found.append(what)
+            found.append(warning)
     return found
 
 
@@ -192,8 +197,8 @@ def main():
             icons = f"{len(names)} icons ({', '.join(names)})" if names else "no icons"
             fonts = "web fonts linked" if args.web_fonts else "installed fonts only"
             print(f"{path}: applied the theme with {icons}, {fonts}, {count} highlighted code blocks.")
-            for what in own_style_warnings(page):
-                print(f"{path}: warning: the page sets {what} of its own. Use the theme's tokens instead.", file=sys.stderr)
+            for warning in own_style_warnings(page):
+                print(f"{path}: warning: the page {warning}", file=sys.stderr)
     except (OSError, ValueError) as error:
         parser.exit(1, f"{error}\n")
 

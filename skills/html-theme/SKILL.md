@@ -44,9 +44,10 @@ There are five sizes. Choose the size by role, through the element or class. Nev
 ## Color
 
 - Grays do the work. From the page to the strongest text, the tokens are `--bg`, `--surface`, `--sunken`, `--hover`, `--selected`, `--border-subtle`, `--border`, `--border-strong`, `--text-faint`, `--text-muted`, `--text` and `--text-strong`.
-- `--accent` is red-orange, and it colors marks only: link underlines, focus rings, the selected tab or item, and the one highlighted value in a chart. Text is never red-orange.
-- `--success`, `--warning` and `--danger` color only status icons and callout stripes. The label beside them stays gray.
+- `--accent` is red-orange, and it colors marks only: link underlines, focus rings, checked controls, and the one highlighted value in a chart. Text is never red-orange.
+- `--success`, `--warning` and `--danger` color only status icons. The label beside them stays gray.
 - Separate things with the weakest means that works. Use tone first, through `.panel` or `.inset`. Then use `--border-subtle` for dividers, `--border` for containers and `--border-strong` for inputs.
+- Never put a border on one side of a box. No stripe on a callout, quote, card, step or section, in any color. Mark the box with tone, a full border or a status icon instead. A divider line between rows, such as `hr` or a table row, is not a box border.
 - Light and dark mode come with the theme. The page follows the system setting, or `data-theme="light"` or `data-theme="dark"` on `<html>`.
 
 ## Icons
@@ -90,8 +91,8 @@ Write `<svg class="icon" aria-hidden="true"><use href="#i-NAME"/></svg>` inside 
 - `.source` is the line under a code block that links to the file.
 - Wrap a `table` in `.table-wrap` so it scrolls on narrow screens.
 - `ul.checks` is a status list. Each `li` holds a status icon, a `div` with a `.name` and a `.small.muted` detail, and an optional `.small.faint` duration.
-- `.callout` is a note with an icon and a stripe. Add `.success`, `.warning` or `.danger` for a status.
-- `nav.tabs` holds links or buttons. Mark the current one with `aria-current="page"` or `aria-selected="true"`.
+- `.callout` is a sunken note with an icon. Add `.success`, `.warning` or `.danger` to color the icon for a status.
+- `nav.tabs` holds links or buttons. Mark the current one with `aria-current="page"` or `aria-selected="true"`. It gets the `--selected` tone.
 - `.btn` takes `.btn-primary`, `.btn-secondary` or `.btn-quiet`. `.icon-btn` is for icon-only buttons.
 - `.field` holds a `label`, an `.input` wrapper around the `input` with an optional `.suffix`, and a `.hint`. `.checkbox` is a `label` around a checkbox.
 - `details` with a `summary` hides optional detail.
